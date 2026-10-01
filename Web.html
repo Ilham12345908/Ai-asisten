@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<button onclick="cekUrl()">Cek URL Web Ini</button>
+<p id="tampilUrl"></p>
+
+<script>
+function cekUrl() {
+    let alamat = window.location.href;
+    document.getElementById("tampilUrl").innerText = "URL saat ini: " + alamat;
+}
+</script>
+
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Floating Assistant</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Container Jendela Floating */
+        .window {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            width: 320px;
+            background: #1e1e2e;
+            border: 1px solid #33334d;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header / Bar Penggeser */
+        .window-header {
+            padding: 12px 15px;
+            background: #252538;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            cursor: move;
+            user-select: none;
+            touch-action: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #33334d;
+        }
+
+        .window-header span {
+            font-weight: bold;
+            font-size: 14px;
+            color: #00adb5;
+        }
+
+        .window-body {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 90px;
+            background: #12121c;
+            color: #fff;
+            border: 1px solid #444466;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: vertical;
+            font-size: 13px;
+        }
+
+        button {
+            width: 100%;
+            background: #00adb5;
+            color: #121212;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #008c9e;
+        }
+
+        .result-box {
+            background: #12121c;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #00adb5;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<!-- GUI Jendela Melayang -->
+<div class="window" id="aiWindow">
+    <div class="window-header" id="windowHeader">
+        <span>⚡ AI Study Assistant</span>
+        <small style="color: #888; font-size: 10px;">::: Drag</small>
+    </div>
+    <div class="window-body">
+        <textarea id="promptInput" placeholder="Ketik soal/pertanyaan di sini..."></textarea>
+        <button onclick="askAI()" id="btnSubmit">Tanya AI</button>
+
+        <div class="result-box" id="resultBox">
+            Jawaban bakal muncul di sini...
+        </div>
+    </div>
+</div>
+
+<script>
+    // API KEY TERBARU
+    const GEMINI_API_KEY = "AQ.Ab8RN6LmiMC9j25JyYp0ZpfCaEj5I7ZwBwD-EPad_s5jHEOPqg";
+
+    // --- LOGIKA DRAGGABLE / FLOATING WINDOW ---
+    const windowEl = document.getElementById("aiWindow");
+    const headerEl = document.getElementById("windowHeader");
+
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    function startDrag(e) {
+        isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        offsetX = clientX - windowEl.offsetLeft;
+        offsetY = clientY - windowEl.offsetTop;
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        windowEl.style.left = (clientX - offsetX) + "px";
+        windowEl.style.top = (clientY - offsetY) + "px";
+    }
+
+    function stopDrag() {
+        isDragging = false;
+    }
+
+    // Touch Event untuk Layar HP
+    headerEl.addEventListener("touchstart", startDrag, { passive: false });
+    document.addEventListener("touchmove", drag, { passive: false });
+    document.addEventListener("touchend", stopDrag);
+
+    // Mouse Event untuk PC/Browser
+    headerEl.addEventListener("mousedown", startDrag);
+    document.addEventListener("mousemove", drag);
+    document.addEventListener("mouseup", stopDrag);
+
+
+    // --- LOGIKA INTEGRASI GEMINI API ---
+    async function askAI() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        const resultBox = document.getElementById('resultBox');
+        const btn = document.getElementById('btnSubmit');
+
+        if (!prompt) {
+            alert("Isi dulu pertanyaannya, Ham!");
+            return;
+        }
+
+        resultBox.innerText = "Memproses jawaban...";
+        btn.disabled = true;
+
+        // Endpoint Gemini API
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const reply = data.candidates[0].content.parts[0].text;
+                resultBox.innerText = reply;
+            } else {
+                resultBox.innerText = "Error: " + (data.error.message || "Gagal mengambil jawaban.");
+            }
+        } catch (err) {
+            resultBox.innerText = "Gagal terhubung. Cek koneksi internet HP kamu!";
+            console.error(err);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
